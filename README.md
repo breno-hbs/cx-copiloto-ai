@@ -1,36 +1,102 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# CX Copiloto AI
 
-## Getting Started
+> **Projeto de portfólio independente.** Simula uma ferramenta interna de Experiência do Cliente (CX) para entregas de comida. Todos os dados são **100% fictícios**. Não tem vínculo com o iFood nem com nenhuma empresa, não acessa sistemas internos de terceiros, não usa logotipos oficiais e não é um canal de suporte real.
 
-First, run the development server:
+## O problema
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+Equipes de atendimento recebem muitas solicitações repetitivas sobre pedidos. Algumas podem ser respondidas na hora com informação verificada; outras exigem análise humana, e o atendente acaba relendo a conversa inteira para entender o caso.
+
+## A solução
+
+O CX Copiloto AI recebe a mensagem do cliente, identifica o motivo do contato, consulta o pedido e:
+
+- **responde sozinho** quando há informação verificada (status de entrega, andamento de reembolso); ou
+- **encaminha a um humano** com o contexto preservado: histórico, dados do pedido, intenção, prioridade e o motivo do encaminhamento.
+
+A IA **não executa reembolsos, não cancela pedidos e não inventa decisões**.
+
+## Como funciona
+
+```
+Cliente ─► /api/chat ─► 1. Regras determinísticas (saúde/alergia, jurídico, injection) ──► humano (0 chamadas ao LLM)
+                         2. Busca do pedido (código, não LLM)
+                         3. Agente de Triagem (Gemini, JSON validado por schema)
+                         4. Agente de Atendimento (só se elegível; usa apenas pedido + base de conhecimento)
+                         5. Validador de saída ──► reprovou? humano
+                                    │
+                    resposta ao cliente  ou  ticket + webhook
+                                    │
+                  Painel do atendente: fila por prioridade, contexto, assumir, encerrar
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- **Máximo de 2 chamadas ao LLM por mensagem.** Casos sensíveis custam 0 chamadas.
+- **Triagem** classifica intenção, urgência e necessidade de humano. Não escreve ao cliente.
+- **Atendimento** só roda para atraso e acompanhamento de reembolso, e só pode usar o pedido e os artigos da base de conhecimento.
+- **Qualquer falha, dúvida ou política escala para humano**: erro do LLM, timeout, baixa confiança, resposta reprovada.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Segurança e prevenção de respostas inventadas
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- A IA tem acesso **somente leitura** ao pedido. Não existe nenhuma ferramenta de escrita.
+- Saúde/alergia, ameaça jurídica e tentativas de manipular as instruções são tratadas por **regras fixas**, antes de qualquer LLM.
+- Reembolso a executar, cobrança duplicada e item faltando **sempre** vão para um humano.
+- O **validador** bloqueia: promessas ("vou reembolsar", "garantimos"), valores em R$ que não constam no pedido, artigos de base de conhecimento inexistentes ou de outra intenção, e contradição do status de reembolso.
+- O texto do cliente é tratado como **dado não confiável** nos prompts.
+- Limite de tamanho da mensagem, limite por IP, **teto diário de chamadas ao LLM** e login do atendente por senha.
+- As chaves ficam **apenas no servidor** (variáveis de ambiente). O banco só aceita acesso pela chave de servidor, com RLS ativo.
 
-## Learn More
+## Stack
 
-To learn more about Next.js, take a look at the following resources:
+Next.js 16 (App Router) · TypeScript · Tailwind · Supabase (Postgres) · Google Gemini · Vitest · Vercel · Make (webhook).
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Páginas
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| Rota | Função |
+|---|---|
+| `/` | Chat do cliente (escolhe um pedido fictício) |
+| `/agent` | Painel do atendente (fila, contexto, assumir e encerrar) |
+| `/metrics` | Indicadores de atendimento |
 
-## Deploy on Vercel
+## Rodando localmente
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+1. Crie um projeto no Supabase e rode `supabase/schema.sql` e depois `supabase/seed.sql` no SQL Editor.
+2. Crie uma chave do Gemini no Google AI Studio.
+3. Copie `.env.example` para `.env.local` e preencha. **Nunca commite o `.env.local`.**
+4. ```bash
+   npm install
+   npm run dev
+   ```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Testes e avaliação
+
+```bash
+npm test        # testes unitários do orquestrador e do validador (sem chamar a API)
+npm run eval    # 30 casos contra o Gemini real; gera eval/results.md
+```
+
+## Resultados
+
+Avaliação com 30 mensagens fictícias contra o Gemini real (`gemini-3.5-flash-lite`), cobrindo os 5 cenários e 7 casos adversariais. Relatório completo, caso a caso, em [`eval/results.md`](eval/results.md).
+
+| Métrica | Resultado | Critério |
+|---|---|---|
+| Decisão correta (responder × escalar) | 96,7% (29/30) | ≥ 90% |
+| Intenção correta | 100% | ≥ 90% |
+| Saúde/alergia escalada com prioridade crítica | 100% (5/5) | 100% |
+| Casos adversariais escalados (injection, cancelamento, ameaça, fora do escopo) | 100% (7/7) | 100% |
+| Respostas automáticas indevidas | 0 | 0 |
+| Latência média / p95 | 1,6 s / 4,2 s | p95 < 8 s |
+
+**Falha encontrada:** em 1 caso de atraso a triagem pediu humano por precaução (o cliente perguntou onde estava o pedido, informação que o sistema não tem). É um erro conservador: a IA deixou de responder, não respondeu errado.
+
+**Ajuste feito após a avaliação:** as respostas mostravam o horário em UTC. As datas agora vão ao modelo já em horário de Brasília. Essa correção foi validada com uma chamada manual e não faz parte da rodada de 30 casos.
+
+## Limitações
+
+- Demonstração com 5 pedidos fictícios e uma base de conhecimento pequena, sem RAG.
+- O plano gratuito do Gemini tem limite de requisições por minuto; quando a IA fica indisponível, **tudo é encaminhado a um humano** em vez de arriscar uma resposta.
+- O limite por IP é em memória (melhor esforço em ambiente serverless).
+- O acesso do atendente usa uma senha única de demonstração, não um sistema de usuários.
+
+## Aviso
+
+Projeto educacional e de portfólio. Os nomes, pedidos e valores são inventados. Qualquer semelhança com pessoas, pedidos ou empresas reais é coincidência.

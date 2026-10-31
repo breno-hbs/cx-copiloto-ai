@@ -40,7 +40,19 @@ async function generateJson<T>(schema: z.ZodType<T>, system: string, user: strin
 }
 
 // Dados do cliente entram sempre dentro de blocos delimitados e tratados como DADOS.
-const orderBlock = (o: Order) => JSON.stringify(o);
+// Datas vão ao modelo já em horário de Brasília para ele não exibir UTC ao cliente.
+const brt = (iso: string | null) =>
+  iso
+    ? new Date(iso).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "short", timeStyle: "short" })
+    : null;
+const orderBlock = (o: Order) =>
+  JSON.stringify({
+    ...o,
+    placed_at: brt(o.placed_at),
+    eta: brt(o.eta),
+    delivered_at: brt(o.delivered_at),
+    payment_charges: o.payment_charges.map((c) => ({ ...c, at: brt(c.at) })),
+  });
 const historyBlock = (h: { role: string; content: string }[]) =>
   h.slice(-8).map((t) => `${t.role}: ${t.content}`).join("\n") || "(sem histórico)";
 
@@ -75,7 +87,7 @@ export const geminiLlm: Llm = {
     generateJson(
       ReplySchema,
       REPLY_SYSTEM,
-      `Agora (UTC): ${new Date().toISOString()}\n<base_de_conhecimento>\n${kb
+      `Agora (horário de Brasília): ${brt(new Date().toISOString())}. Todas as datas e horas do pedido estão em horário de Brasília.\n<base_de_conhecimento>\n${kb
         .map((a) => `[${a.id}] ${a.title}: ${a.body}`)
         .join("\n")}\n</base_de_conhecimento>\n<pedido>${orderBlock(order)}</pedido>\n<historico>\n${historyBlock(history)}\n</historico>\n<mensagem_cliente>\n${message}\n</mensagem_cliente>`,
     ),
