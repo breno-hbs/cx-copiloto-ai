@@ -12,6 +12,20 @@
 
 Os 5 pedidos de teste cobrem os cenários: **PED-1001** atraso, **PED-1002** reembolso, **PED-1003** item faltando, **PED-1004** cobrança duplicada e **PED-1005** alergia.
 
+## Visual
+
+**Chat do cliente.** Caso de alergia: a IA não tenta resolver, orienta a buscar atendimento médico e encaminha a um humano com prioridade.
+
+![Chat do cliente encaminhando um caso de alergia](docs/chat.png)
+
+**Painel do atendente.** Fila por prioridade, motivo do encaminhamento, dados do pedido e conversa completa, com assumir e encerrar.
+
+![Painel do atendente com fila e contexto do chamado](docs/painel.png)
+
+**Indicadores.** Conversas, taxa de resolução pela IA, tempos de atendimento e contatos por intenção.
+
+![Painel de indicadores](docs/indicadores.png)
+
 ## O problema
 
 Equipes de atendimento recebem muitas solicitações repetitivas sobre pedidos. Algumas podem ser respondidas na hora com informação verificada; outras exigem análise humana, e o atendente acaba relendo a conversa inteira para entender o caso.
