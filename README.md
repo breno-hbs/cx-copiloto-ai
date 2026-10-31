@@ -2,6 +2,16 @@
 
 > **Projeto de portfólio independente.** Simula uma ferramenta interna de Experiência do Cliente (CX) para entregas de comida. Todos os dados são **100% fictícios**. Não tem vínculo com o iFood nem com nenhuma empresa, não acessa sistemas internos de terceiros, não usa logotipos oficiais e não é um canal de suporte real.
 
+## Demonstração
+
+**https://cx-copiloto-ai.vercel.app**
+
+- **Chat do cliente** (`/`): escolha um pedido fictício e use um dos exemplos, ou escreva a sua mensagem.
+- **Painel do atendente** (`/agent`): protegido por senha. A senha da demonstração não está neste repositório; peça ao autor.
+- **Indicadores** (`/metrics`): conversas, taxa de resolução pela IA, tempos de atendimento e latência.
+
+Os 5 pedidos de teste cobrem os cenários: **PED-1001** atraso, **PED-1002** reembolso, **PED-1003** item faltando, **PED-1004** cobrança duplicada e **PED-1005** alergia.
+
 ## O problema
 
 Equipes de atendimento recebem muitas solicitações repetitivas sobre pedidos. Algumas podem ser respondidas na hora com informação verificada; outras exigem análise humana, e o atendente acaba relendo a conversa inteira para entender o caso.
