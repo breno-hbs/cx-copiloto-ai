@@ -7,7 +7,7 @@
 **https://cx-copiloto-ai.vercel.app**
 
 - **Chat do cliente** (`/`): escolha um pedido fictício e use um dos exemplos, ou escreva a sua mensagem.
-- **Painel do atendente** (`/agent`): protegido por senha. A senha da demonstração não está neste repositório; peça ao autor.
+- **Painel do atendente** (`/agent`): protegido por senha. Senha da demonstração (pública, só para este ambiente de teste): `demo-cx-2026`. Todos os dados são fictícios e o banco é limpo periodicamente.
 - **Indicadores** (`/metrics`): conversas, taxa de resolução pela IA, tempos de atendimento e latência.
 
 Os 5 pedidos de teste cobrem os cenários: **PED-1001** atraso, **PED-1002** reembolso, **PED-1003** item faltando, **PED-1004** cobrança duplicada e **PED-1005** alergia.
