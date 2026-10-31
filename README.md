@@ -14,15 +14,15 @@ Os 5 pedidos de teste cobrem os cenários: **PED-1001** atraso, **PED-1002** ree
 
 ## Visual
 
-**Chat do cliente.** Caso de alergia: a IA não tenta resolver, orienta a buscar atendimento médico e encaminha a um humano com prioridade.
+**Chat do cliente.** A cliente reclama de atraso, mas o pedido consta como entregue. Os dados divergem, então a IA não afirma nada e encaminha a um humano em vez de arriscar uma resposta errada.
 
 ![Chat do cliente encaminhando um caso de alergia](docs/chat.png)
 
-**Painel do atendente.** Fila por prioridade, motivo do encaminhamento, dados do pedido e conversa completa, com assumir e encerrar.
+**Painel do atendente.** O mesmo caso chega à fila com o motivo do encaminhamento, os dados do pedido e a conversa completa. O atendente assume e encerra com uma nota.
 
 ![Painel do atendente com fila e contexto do chamado](docs/painel.png)
 
-**Indicadores.** Conversas, taxa de resolução pela IA, tempos de atendimento e contatos por intenção.
+**Indicadores.** Conversas, taxa de resolução pela IA, tempos de atendimento, latência do LLM e contatos por intenção. A captura vem de uma sessão de teste com uma única conversa.
 
 ![Painel de indicadores](docs/indicadores.png)
 
