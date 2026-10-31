@@ -6,6 +6,8 @@
 
 **https://cx-copiloto-ai.vercel.app**
 
+▶️ **[Ver o vídeo da demonstração](https://github.com/breno-hbs/cx-copiloto-ai/blob/main/docs/demo.mp4)** (fluxo completo: chat, encaminhamento, painel do atendente)
+
 - **Chat do cliente** (`/`): escolha um pedido fictício e use um dos exemplos, ou escreva a sua mensagem.
 - **Painel do atendente** (`/agent`): protegido por senha. Senha da demonstração (pública, só para este ambiente de teste): `demo-cx-2026`. Todos os dados são fictícios e o banco é limpo periodicamente.
 - **Indicadores** (`/metrics`): conversas, taxa de resolução pela IA, tempos de atendimento e latência.
