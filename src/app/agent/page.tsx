@@ -9,7 +9,7 @@ type Ticket = {
 };
 type Detail = {
   ticket: Ticket;
-  order: { id: string; status: string; restaurant: string; items: { name: string; qty: number; price: number }[]; total: number; eta: string | null; refund_status: string; payment_charges: { amount: number; at: string }[] } | null;
+  order: { id: string; persona_name: string; status: string; restaurant: string; items: { name: string; qty: number; price: number }[]; total: number; eta: string | null; refund_status: string; payment_charges: { amount: number; at: string }[] } | null;
   messages: { id: string; role: string; content: string }[];
   decisions: { id: string; stage: string; intent: string | null; confidence: number | null; reason: string | null; needs_human: boolean | null }[];
   events: { id: string; type: string; created_at: string }[];
@@ -20,6 +20,12 @@ const DOT: Record<string, string> = {
 };
 const PRIO_LABEL: Record<string, string> = { critical: "Crítica", high: "Alta", medium: "Média", low: "Baixa" };
 const STATUS_LABEL: Record<string, string> = { open: "Aberto", assigned: "Em atendimento", closed: "Encerrado" };
+const ORDER_STATUS: Record<string, string> = {
+  out_for_delivery: "Em rota de entrega", delivered: "Entregue", cancelled: "Cancelado",
+};
+const REFUND_STATUS: Record<string, string> = {
+  none: "Nenhum", requested: "Solicitado", in_review: "Em análise", approved: "Aprovado", paid: "Pago",
+};
 const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const LABEL = "font-mono text-xs uppercase tracking-widest text-[#6B6B6B]";
 const INPUT = "border border-[#CCCCCC] rounded-md px-3 outline-none focus:border-[#1F4FD8] focus:ring-2 focus:ring-[#1F4FD8]/20";
@@ -128,9 +134,9 @@ export default function Agent() {
                 ● {PRIO_LABEL[detail.ticket.priority]} · {STATUS_LABEL[detail.ticket.status]}
               </span>
               <h2 className="text-[32px] leading-9 font-extrabold tracking-tight">
-                {detail.ticket.order_id}{detail.ticket.orders ? ` · ${detail.ticket.orders.persona_name}` : ""}
+                {detail.ticket.order_id}{detail.order ? ` · ${detail.order.persona_name}` : ""}
               </h2>
-              {detail.order && <p className="text-[#6B6B6B]">{detail.order.restaurant} · {detail.order.status} · {brl(detail.order.total)}</p>}
+              {detail.order && <p className="text-[#6B6B6B]">{detail.order.restaurant} · {ORDER_STATUS[detail.order.status] ?? detail.order.status} · {brl(detail.order.total)}</p>}
             </div>
 
             <div className="flex flex-col gap-2 pt-5 border-t border-[#E6E6E6]">
@@ -142,7 +148,7 @@ export default function Agent() {
             {detail.order && (
               <div className="flex flex-col gap-1.5 pt-5 border-t border-[#E6E6E6]">
                 <h3 className={LABEL}>Pedido</h3>
-                <p>Reembolso: {detail.order.refund_status}</p>
+                <p>Reembolso: {REFUND_STATUS[detail.order.refund_status] ?? detail.order.refund_status}</p>
                 <p>Itens: {detail.order.items.map((i) => `${i.qty}x ${i.name}`).join(", ")}</p>
                 <p>Cobranças: {detail.order.payment_charges.map((c) => brl(c.amount)).join(" + ")}</p>
               </div>
