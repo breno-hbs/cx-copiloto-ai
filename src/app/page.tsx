@@ -28,7 +28,9 @@ export default function Chat() {
       if (Array.isArray(o)) { setOrders(o); setOrderId(o[0]?.id ?? ""); }
     });
   }, []);
-  useEffect(() => bottom.current?.scrollIntoView({ behavior: "smooth" }), [msgs]);
+  useEffect(() => {
+    bottom.current?.scrollIntoView({ behavior: "smooth" });
+  }, [msgs]);
 
   const change = (id: string) => { setOrderId(id); setConversationId(undefined); setMsgs([]); setEscalated(false); };
 
