@@ -15,11 +15,19 @@ type Detail = {
   events: { id: string; type: string; created_at: string }[];
 };
 
-const PRIO: Record<string, string> = {
-  critical: "bg-red-600 text-white", high: "bg-orange-500 text-white", medium: "bg-yellow-400", low: "bg-neutral-300",
+const DOT: Record<string, string> = {
+  critical: "bg-[#D92D20]", high: "bg-[#F79009]", medium: "bg-[#EAB308]", low: "bg-[#98A2B3]",
 };
 const PRIO_LABEL: Record<string, string> = { critical: "Crítica", high: "Alta", medium: "Média", low: "Baixa" };
+const STATUS_LABEL: Record<string, string> = { open: "Aberto", assigned: "Em atendimento", closed: "Encerrado" };
 const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+const LABEL = "font-mono text-xs uppercase tracking-widest text-[#6B6B6B]";
+const INPUT = "border border-[#CCCCCC] rounded-md px-3 outline-none focus:border-[#1F4FD8] focus:ring-2 focus:ring-[#1F4FD8]/20";
+const waited = (iso: string, now: number) => {
+  if (!now) return "—";
+  const m = Math.max(0, Math.round((now - new Date(iso).getTime()) / 60000));
+  return m < 60 ? `${m} min` : `${Math.floor(m / 60)} h`;
+};
 
 export default function Agent() {
   const [authed, setAuthed] = useState<boolean | null>(null);
@@ -31,12 +39,13 @@ export default function Agent() {
   const [detail, setDetail] = useState<Detail>();
   const [note, setNote] = useState("");
   const [name, setName] = useState("Atendente Demo");
+  const [now, setNow] = useState(0);
 
   const load = useCallback(async () => {
     const r = await fetch("/api/agent/tickets");
     if (r.status === 401) return setAuthed(false);
     const d = await r.json();
-    setAuthed(true); setOpen(d.open); setClosed(d.closed);
+    setAuthed(true); setOpen(d.open); setClosed(d.closed); setNow(Date.now());
   }, []);
 
   useEffect(() => {
@@ -62,90 +71,118 @@ export default function Agent() {
     load();
   }
 
-  if (authed === null) return <main className="p-6 text-sm">Carregando…</main>;
+  if (authed === null) return <main className="p-8 text-sm text-[#6B6B6B]">Carregando…</main>;
   if (!authed)
     return (
-      <main className="max-w-sm mx-auto p-6 w-full">
-        <form onSubmit={login} className="bg-white border rounded-lg p-4 flex flex-col gap-3">
-          <h1 className="font-semibold">Painel do atendente</h1>
-          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Senha da demonstração" className="border rounded px-3 py-2" />
-          {err && <p className="text-sm text-red-600">{err}</p>}
-          <button className="bg-neutral-900 text-white rounded py-2">Entrar</button>
+      <main className="max-w-sm mx-auto px-6 py-16 w-full">
+        <form onSubmit={login} className="flex flex-col gap-4">
+          <h1 className="text-3xl font-extrabold tracking-tight">Painel do atendente</h1>
+          <p className="text-sm text-[#6B6B6B]">Acesso restrito à demonstração.</p>
+          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Senha da demonstração" aria-label="Senha" className={`${INPUT} h-11`} />
+          {err && <p className="text-sm text-[#D92D20]">{err}</p>}
+          <button className="bg-[#1F4FD8] text-white font-semibold rounded-md h-11">Entrar</button>
         </form>
       </main>
     );
 
   return (
-    <main className="grid md:grid-cols-[320px_1fr] gap-4 p-4 flex-1 max-w-6xl w-full mx-auto">
-      <aside className="flex flex-col gap-2">
-        <h2 className="font-semibold text-sm">Fila ({open.length})</h2>
-        {open.length === 0 && <p className="text-sm text-neutral-500">Nenhum chamado aberto.</p>}
+    <main className="grid lg:grid-cols-[minmax(0,760px)_1fr] flex-1 w-full">
+      <aside className="flex flex-col border-b lg:border-b-0 lg:border-r border-[#E6E6E6]">
+        <div className="flex items-baseline justify-between px-8 pt-7 pb-4">
+          <div className="flex items-baseline gap-3">
+            <h2 className="text-[28px] font-extrabold tracking-tight">Fila</h2>
+            <span className="font-mono text-sm text-[#6B6B6B]">{open.length} abertos</span>
+          </div>
+          <span className={`hidden sm:block ${LABEL}`}>Ordenado por prioridade</span>
+        </div>
+        <div className={`flex items-center h-9 px-8 gap-3 border-y border-[#E6E6E6] ${LABEL}`}>
+          <span className="w-7 shrink-0" />
+          <span className="w-24 shrink-0">Pedido</span>
+          <span className="flex-1">Motivo</span>
+          <span className="hidden sm:block w-32 shrink-0">Status</span>
+          <span className="w-14 shrink-0 text-right">Espera</span>
+        </div>
+        {open.length === 0 && <p className="px-8 py-6 text-sm text-[#6B6B6B]">Nenhum chamado aberto.</p>}
         {open.map((t) => (
-          <button key={t.id} onClick={() => setSel(t.id)} className={`text-left bg-white border rounded-lg p-2 text-sm ${sel === t.id ? "ring-2 ring-neutral-900" : ""}`}>
-            <div className="flex items-center gap-2">
-              <span className={`text-xs px-1.5 py-0.5 rounded ${PRIO[t.priority]}`}>{PRIO_LABEL[t.priority]}</span>
-              <span className="text-neutral-500 text-xs">{t.order_id} · {t.status === "assigned" ? `com ${t.assignee}` : "aberto"}</span>
-            </div>
-            <p className="mt-1 line-clamp-2">{t.summary}</p>
+          <button key={t.id} onClick={() => setSel(t.id)} className={`w-full flex items-center gap-3 h-16 px-8 text-left border-b border-[#E6E6E6] border-l-[3px] hover:bg-[#F7F8FC] ${sel === t.id ? "bg-[#EEF2FD] border-l-[#1F4FD8]" : "border-l-transparent"}`}>
+            <span className="w-7 shrink-0"><span className={`block size-2.5 rounded-full ${DOT[t.priority]}`} title={PRIO_LABEL[t.priority]} /></span>
+            <span className="w-24 shrink-0 font-mono text-sm font-semibold">{t.order_id}</span>
+            <span className={`flex-1 min-w-0 truncate text-[15px] ${sel === t.id ? "font-semibold" : ""}`}>{t.summary}</span>
+            <span className="hidden sm:block w-32 shrink-0 text-sm">{STATUS_LABEL[t.status]}</span>
+            <span className={`w-14 shrink-0 text-right font-mono text-sm ${t.priority === "critical" ? "text-[#D92D20]" : "text-[#6B6B6B]"}`}>{waited(t.created_at, now)}</span>
           </button>
         ))}
-        {closed.length > 0 && <h2 className="font-semibold text-sm mt-3">Encerrados recentes</h2>}
+        {closed.length > 0 && <h3 className={`px-8 pt-6 pb-2 ${LABEL}`}>Encerrados recentes</h3>}
         {closed.map((t) => (
-          <button key={t.id} onClick={() => setSel(t.id)} className="text-left bg-neutral-100 border rounded-lg p-2 text-xs text-neutral-600">
-            {t.order_id} · {t.intent} — {t.resolution_note}
+          <button key={t.id} onClick={() => setSel(t.id)} className={`text-left px-8 py-3 border-b border-[#E6E6E6] text-sm text-[#6B6B6B] hover:bg-[#F7F8FC] ${sel === t.id ? "bg-[#EEF2FD]" : ""}`}>
+            <span className="font-mono font-semibold text-[#111111]">{t.order_id}</span> · {t.intent} — {t.resolution_note}
           </button>
         ))}
       </aside>
 
-      <section className="bg-white border rounded-lg p-4 text-sm">
-        {!detail || !sel ? <p className="text-neutral-500">Selecione um chamado.</p> : (
-          <div className="flex flex-col gap-4">
-            <div>
-              <span className={`text-xs px-1.5 py-0.5 rounded ${PRIO[detail.ticket.priority]}`}>{PRIO_LABEL[detail.ticket.priority]}</span>
-              <h2 className="font-semibold mt-1">Motivo do encaminhamento</h2>
-              <p>{detail.ticket.reason}</p>
-              <p className="text-neutral-500 text-xs mt-1">Intenção: {detail.ticket.intent} · Status: {detail.ticket.status}</p>
+      <section className="p-8 text-[15px]">
+        {!detail || !sel ? <p className="text-[#6B6B6B]">Selecione um chamado.</p> : (
+          <div className="flex flex-col gap-6 h-full">
+            <div className="flex flex-col gap-2">
+              <span className={`font-mono text-xs uppercase tracking-widest ${detail.ticket.priority === "critical" ? "text-[#D92D20]" : "text-[#6B6B6B]"}`}>
+                ● {PRIO_LABEL[detail.ticket.priority]} · {STATUS_LABEL[detail.ticket.status]}
+              </span>
+              <h2 className="text-[32px] leading-9 font-extrabold tracking-tight">
+                {detail.ticket.order_id}{detail.ticket.orders ? ` · ${detail.ticket.orders.persona_name}` : ""}
+              </h2>
+              {detail.order && <p className="text-[#6B6B6B]">{detail.order.restaurant} · {detail.order.status} · {brl(detail.order.total)}</p>}
             </div>
+
+            <div className="flex flex-col gap-2 pt-5 border-t border-[#E6E6E6]">
+              <h3 className={LABEL}>Por que chegou aqui</h3>
+              <p className="text-base leading-6">{detail.ticket.reason}</p>
+              <p className="text-sm text-[#6B6B6B]">Intenção: {detail.ticket.intent ?? "—"}</p>
+            </div>
+
             {detail.order && (
-              <div className="bg-neutral-50 border rounded p-2">
-                <h3 className="font-semibold">Pedido {detail.order.id} · {detail.order.restaurant}</h3>
-                <p>Status: {detail.order.status} · Total {brl(detail.order.total)} · Reembolso: {detail.order.refund_status}</p>
+              <div className="flex flex-col gap-1.5 pt-5 border-t border-[#E6E6E6]">
+                <h3 className={LABEL}>Pedido</h3>
+                <p>Reembolso: {detail.order.refund_status}</p>
                 <p>Itens: {detail.order.items.map((i) => `${i.qty}x ${i.name}`).join(", ")}</p>
                 <p>Cobranças: {detail.order.payment_charges.map((c) => brl(c.amount)).join(" + ")}</p>
               </div>
             )}
-            <div>
-              <h3 className="font-semibold mb-1">Conversa</h3>
-              <div className="flex flex-col gap-1.5">
-                {detail.messages.map((m) => (
-                  <div key={m.id} className={`rounded px-2 py-1.5 ${m.role === "customer" ? "bg-red-50" : "bg-neutral-100"}`}>
-                    <b>{m.role === "customer" ? "Cliente" : m.role === "ai" ? "IA" : "Atendente"}:</b> {m.content}
-                  </div>
-                ))}
-              </div>
+
+            <div className="flex flex-col gap-3 pt-5 border-t border-[#E6E6E6]">
+              <h3 className={LABEL}>Conversa</h3>
+              {detail.messages.map((m) => (
+                <div key={m.id} className="flex gap-3">
+                  <span className={`w-[72px] shrink-0 font-mono text-[13px] ${m.role === "customer" ? "text-[#6B6B6B]" : "text-[#1F4FD8]"}`}>
+                    {m.role === "customer" ? "Cliente" : m.role === "ai" ? "Copiloto" : "Atendente"}
+                  </span>
+                  <span className="flex-1 leading-[22px]">{m.content}</span>
+                </div>
+              ))}
             </div>
-            <details>
-              <summary className="cursor-pointer font-semibold">Decisões da IA ({detail.decisions.length})</summary>
-              <ul className="mt-1 text-xs text-neutral-700 list-disc pl-4">
+
+            <details className="pt-5 border-t border-[#E6E6E6]">
+              <summary className={`cursor-pointer ${LABEL}`}>Decisões da IA ({detail.decisions.length})</summary>
+              <ul className="mt-2 text-sm text-[#444444] list-disc pl-4 flex flex-col gap-1">
                 {detail.decisions.map((d) => (
                   <li key={d.id}>{d.stage}: {d.intent ?? "—"} {d.confidence != null ? `(conf. ${d.confidence})` : ""} {d.needs_human ? "→ humano" : ""} {d.reason ?? ""}</li>
                 ))}
               </ul>
             </details>
+
             {detail.ticket.status !== "closed" && (
-              <div className="flex flex-col gap-2 border-t pt-3">
-                <input value={name} onChange={(e) => setName(e.target.value)} className="border rounded px-2 py-1.5" aria-label="Nome do atendente" />
-                {detail.ticket.status === "open" && <button onClick={() => act("assign")} className="bg-neutral-900 text-white rounded py-2">Assumir atendimento</button>}
+              <div className="flex flex-col gap-3 mt-auto pt-5 border-t border-[#E6E6E6]">
+                <input value={name} onChange={(e) => setName(e.target.value)} className={`${INPUT} h-11`} aria-label="Nome do atendente" />
                 {detail.ticket.status === "assigned" && (
-                  <>
-                    <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="Nota de resolução (obrigatória)" className="border rounded px-2 py-1.5" rows={2} />
-                    <button onClick={() => act("close")} className="bg-green-700 text-white rounded py-2">Encerrar atendimento</button>
-                  </>
+                  <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="Nota de resolução (obrigatória)" className={`${INPUT} py-2`} rows={2} />
                 )}
-                {err && <p className="text-red-600">{err}</p>}
+                <div className="flex gap-3">
+                  {detail.ticket.status === "open" && <button onClick={() => act("assign")} className="bg-[#1F4FD8] text-white font-semibold rounded-md h-11 px-5">Assumir atendimento</button>}
+                  {detail.ticket.status === "assigned" && <button onClick={() => act("close")} className="bg-[#1F4FD8] text-white font-semibold rounded-md h-11 px-5">Encerrar atendimento</button>}
+                </div>
+                {err && <p className="text-[#D92D20]">{err}</p>}
               </div>
             )}
-            {detail.ticket.status === "closed" && <p className="text-neutral-600">Encerrado: {detail.ticket.resolution_note}</p>}
+            {detail.ticket.status === "closed" && <p className="text-[#6B6B6B]">Encerrado: {detail.ticket.resolution_note}</p>}
           </div>
         )}
       </section>

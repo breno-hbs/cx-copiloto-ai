@@ -8,10 +8,12 @@ type M = {
   byIntent: Record<string, number>;
 };
 
-const Card = ({ label, value }: { label: string; value: string | number }) => (
-  <div className="bg-white border rounded-lg p-3">
-    <div className="text-2xl font-semibold">{value}</div>
-    <div className="text-xs text-neutral-500">{label}</div>
+const LABEL = "font-mono text-xs uppercase tracking-widest text-[#6B6B6B]";
+
+const Stat = ({ label, value }: { label: string; value: string | number }) => (
+  <div className="flex flex-col gap-1 py-5 border-b border-[#E6E6E6]">
+    <div className="text-4xl font-extrabold tracking-tight">{value}</div>
+    <div className={LABEL}>{label}</div>
   </div>
 );
 
@@ -23,29 +25,34 @@ export default function Metrics() {
     const t = setInterval(load, 10000);
     return () => clearInterval(t);
   }, []);
-  if (!m) return <main className="p-6 text-sm">Carregando…</main>;
+  if (!m) return <main className="p-8 text-sm text-[#6B6B6B]">Carregando…</main>;
   const fmt = (v: number | null, s: string) => (v == null ? "—" : `${v}${s}`);
   const max = Math.max(1, ...Object.values(m.byIntent));
   return (
-    <main className="max-w-4xl w-full mx-auto p-4 flex flex-col gap-4">
-      <h1 className="font-semibold">Indicadores da demonstração</h1>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Card label="Conversas" value={m.total} />
-        <Card label="Resolvidas pela IA" value={`${m.aiRate}%`} />
-        <Card label="Encaminhadas a humano" value={m.escalated} />
-        <Card label="Chamados abertos" value={m.openTickets} />
-        <Card label="Tempo médio até assumir" value={fmt(m.avgMinToAssign, " min")} />
-        <Card label="Tempo médio até encerrar" value={fmt(m.avgMinToClose, " min")} />
-        <Card label="Latência média do LLM" value={fmt(m.avgLlmLatencyMs, " ms")} />
+    <main className="max-w-5xl w-full mx-auto px-4 sm:px-8 py-8 flex flex-col gap-10 flex-1">
+      <div className="flex flex-col gap-2">
+        <span className={LABEL}>Demonstração · dados fictícios</span>
+        <h1 className="text-[32px] leading-9 font-extrabold tracking-tight">Indicadores</h1>
       </div>
-      <section className="bg-white border rounded-lg p-3">
-        <h2 className="text-sm font-semibold mb-2">Contatos por intenção</h2>
-        {Object.keys(m.byIntent).length === 0 && <p className="text-sm text-neutral-500">Sem dados ainda.</p>}
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-x-8 border-t border-[#E6E6E6]">
+        <Stat label="Conversas" value={m.total} />
+        <Stat label="Resolvidas pela IA" value={`${m.aiRate}%`} />
+        <Stat label="Encaminhadas a humano" value={m.escalated} />
+        <Stat label="Chamados abertos" value={m.openTickets} />
+        <Stat label="Tempo até assumir" value={fmt(m.avgMinToAssign, " min")} />
+        <Stat label="Tempo até encerrar" value={fmt(m.avgMinToClose, " min")} />
+        <Stat label="Latência média do LLM" value={fmt(m.avgLlmLatencyMs, " ms")} />
+      </div>
+
+      <section className="flex flex-col gap-3">
+        <h2 className={LABEL}>Contatos por intenção</h2>
+        {Object.keys(m.byIntent).length === 0 && <p className="text-sm text-[#6B6B6B]">Sem dados ainda.</p>}
         {Object.entries(m.byIntent).map(([k, v]) => (
-          <div key={k} className="flex items-center gap-2 text-sm mb-1">
-            <span className="w-40">{k}</span>
-            <div className="bg-red-500 h-3 rounded" style={{ width: `${(v / max) * 60}%` }} />
-            <span>{v}</span>
+          <div key={k} className="flex items-center gap-3 text-sm">
+            <span className="w-44 shrink-0 font-mono">{k}</span>
+            <div className="bg-[#1F4FD8] h-3 rounded-sm" style={{ width: `${(v / max) * 60}%` }} />
+            <span className="font-mono text-[#6B6B6B]">{v}</span>
           </div>
         ))}
       </section>
